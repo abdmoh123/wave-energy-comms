@@ -1,4 +1,4 @@
-name: 'Issue States'
+name: Issue States
 
 on:
   project_card:
@@ -11,6 +11,13 @@ permissions:
 
 jobs:
   action:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: dessant/issue-states@v3
+      runs-on: ubuntu-latest
+      steps:
+        - uses: dessant/issue-states@v3.0.0
+          with:
+            # Reopen issues that are moved to these project columns, value must be a comma separated list of project columns
+            open-issue-columns: 'Todo, In Progress'  # optional, default is ''
+            # Close issues that are moved to these project columns, value must be a comma separated list of project columns
+            closed-issue-columns: 'Closed, Done' # optional, default is 'Closed, Done'
+            # Log output parameters, value must be either `true` or `false`
+            log-output: false  # optional, default is false
