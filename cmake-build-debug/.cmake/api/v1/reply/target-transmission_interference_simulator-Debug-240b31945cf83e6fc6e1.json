@@ -53,9 +53,7 @@
 			"sourceIndexes" : 
 			[
 				0,
-				1,
-				2,
-				3
+				1
 			]
 		}
 	],
@@ -93,9 +91,7 @@
 			"sourceIndexes" : 
 			[
 				0,
-				1,
-				2,
-				3
+				1
 			]
 		}
 	],
@@ -111,18 +107,6 @@
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
 			"path" : "interference_simulator.cpp",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 1,
-			"compileGroupIndex" : 0,
-			"path" : "receiver.cpp",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 1,
-			"compileGroupIndex" : 0,
-			"path" : "transmitter.cpp",
 			"sourceGroupIndex" : 0
 		}
 	],
