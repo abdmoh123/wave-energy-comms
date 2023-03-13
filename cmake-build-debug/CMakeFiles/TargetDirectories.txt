@@ -1,0 +1,3 @@
+D:/Documents/Projects/Coding/C/transmission-interference-simulator/cmake-build-debug/CMakeFiles/transmission_interference_simulator.dir
+D:/Documents/Projects/Coding/C/transmission-interference-simulator/cmake-build-debug/CMakeFiles/edit_cache.dir
+D:/Documents/Projects/Coding/C/transmission-interference-simulator/cmake-build-debug/CMakeFiles/rebuild_cache.dir
