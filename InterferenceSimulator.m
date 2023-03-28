@@ -5,6 +5,14 @@ classdef InterferenceSimulator
         distance
     end
 
+    methods(Static)
+        function output_arg = calc_distance_coefficient()
+            % Calculates how distance affects the noise in signal
+            
+            output_arg = obj.distance;
+        end
+    end
+
     methods
         function obj = InterferenceSimulator(distance_in)
             % Constructs an instance of this class
