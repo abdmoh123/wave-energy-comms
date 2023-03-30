@@ -1,7 +1,8 @@
 #include <ArduinoLowPower.h>
 #include <LoRa.h>
 
-const double MAX_VOLTAGE = 15.0;
+const double MAX_EMF_VOLTAGE = 15.0;
+const double MAX_ACC_VOLTAGE = 3.3;
 int counter = 0;
 
 void setup() {
@@ -17,11 +18,11 @@ void setup() {
 }
 
 double gen_voltage(int counter) {
-  return MAX_VOLTAGE * sin(counter);
+  return MAX_EMF_VOLTAGE * sin(counter);
 }
 
 double gen_accelerometer(int counter) {
-
+	return MAX_ACC_VOLTAGE * cos(counter);
 }
 
 void loop() {
