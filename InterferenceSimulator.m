@@ -26,15 +26,10 @@ classdef InterferenceSimulator
             output_arg = wgn(num_rows, num_cols, power=noise_power, imp=load_impedance, seed=1);
         end
 
-        function output_arg = add_white_noise(input_signal, noise_power, load_impedance)
+        function output_arg = add_white_noise(input_signal, signal_noise_ratio)
             % Applies white gaussian noise
 
-            [num_rows, num_cols] = size(input_signal);
-
-            % generates a random gaussian noise vector
-            noise = gen_white_noise(noise_power, load_impedance, num_rows, num_cols);
-            % applies the random noise to the input signal
-            output_arg = input_signal + noise;
+            output_arg = awgn(input_signal, signal_noise_ratio,'measured');
         end
 
         function output_arg = add_periodic_white_noise( ...

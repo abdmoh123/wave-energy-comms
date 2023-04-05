@@ -1,9 +1,9 @@
 clear all;
 SF = 12;    %Spreading Factor
-BW = 1000; %Bandwidth
-Fs = 1000; %Sampling frequency
-s = 127;    %send symbol 'deafult was 33'
-SNR = -5; %Signal Noise Ratio
+BW = 1000; % Bandwidth
+Fs = 1000; % Sampling frequency
+s = 127;    % Send symbol 'default was 33'
+SNR = -5; % Signal Noise Ratio
 
 
 %Generate a data symbol---------------------------------------------
