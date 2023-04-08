@@ -215,11 +215,11 @@ function [symbols_shuf] = LoRa_encode_shuffle(symbols)
 %  out:  symbols_shuf       shuffle symbols
 
 for Ctr = 1 : length(symbols)
-    symbols_binary = de2bi(symbols(Ctr),8) ;
+    symbols_binary = dec2bin(symbols(Ctr),8) ;
     symbols_shuf_binary = [symbols_binary(2) symbols_binary(3) symbols_binary(4) ...
         symbols_binary(6) symbols_binary(5) symbols_binary(1) symbols_binary(7) ...
         symbols_binary(8)] ;
-    symbols_shuf(Ctr) = bi2de(symbols_shuf_binary) ;
+    symbols_shuf(Ctr) = bin2dec(symbols_shuf_binary) ;
 end
 end
 function [symbols_interleaved] = LoRa_encode_interleave(symbols,ppm,rdd)
@@ -236,9 +236,9 @@ symbols_interleaved = [] ;
 sym_idx_ext = 1 ;
 for block_idx = 1 : floor(length(symbols)/(ppm))
     x = symbols((block_idx-1).*ppm+1:block_idx.*ppm) ;
-    symbols_block_binary = de2bi(x,4+rdd) ;
+    symbols_block_binary = dec2bin(x,4+rdd) ;
     symbols_block_binary_rotated = transpose(symbols_block_binary) ; % transposed 
-    symbols_block_rorated = bi2de(symbols_block_binary_rotated) ;
+    symbols_block_rorated = bin2dec(symbols_block_binary_rotated) ;
     mask = ppm ;
     % rotate
     for ctr = 1 : 4 + rdd
@@ -271,9 +271,9 @@ function [symbol_rot] = selectbits_encode(symbol)
 %
 %  out:  symbols_rot        symbols for rotation
 
-symbol_binary = de2bi(symbol,8) ;
+symbol_binary = dec2bin(symbol,8) ;
 symbol_binary_rot = [0 symbol_binary(1) symbol_binary(2) symbol_binary(3) 0 symbol_binary(4) 0 0] ;
-symbol_rot = bi2de(symbol_binary_rot) ;
+symbol_rot = bin2dec(symbol_binary_rot) ;
 end
 function [y] = rotl(bits,count,size)
 % rotl modulo rotation
