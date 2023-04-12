@@ -12,24 +12,26 @@ classdef InterferenceSimulator
             obj.distance = distance_in;
         end
 
-        % function output_arg = calc_receiving_power_density( ...
-        %     obj, ...
-        %     transmit_power, ...
-        %     antenna_gain, ...
-        %     target_radar_cross_section ...
-        % 
-        % )
-        %     %% Calculates the Power Density at the receiving end
-        % 
-        %     output_arg = transmit_power / (4 * pi * obj.distance);
-        % end
+        function output_arg = calc_fspl(obj, frequency, gain_tx, gain_rx)
+            %% Calculates the Free Space Path Loss for a 2 transceiver system
+
+            % takes into account the gains of the transceiver antennas
+            output_arg = fspl(obj.distance, 300000000/frequency) - gain_tx - gain_rx;
+        end
 
         function output_arg = attenuate(obj, input_signal)
             %% Attenuates the signal using the distance between the transceivers
 
+            distance_km = obj.distance / 1000;
             % signal strength is proportional to the inverse square of distance
-            coefficient = 1 / (obj.distance^2);
+            coefficient = 1 / (distance_km^2);
             output_arg = coefficient * input_signal;
+        end
+
+        function output_arg = attenuate_with_noise(obj, input_signal, signal_noise_ratio)
+            noisy_signal = add_white_noise(obj, input_signal, signal_noise_ratio);
+            noise = noisy_signal - input_signal;
+            output_arg = attenuate(obj, input_signal) + noise;
         end
 
         function output_arg = gen_white_noise(~, noise_power, load_impedance, num_rows, num_cols)

@@ -28,31 +28,16 @@ modulated_signal = LoRa_Tx( ...
 Sxx = 10 * log10(rms(modulated_signal).^2);
 disp(['Transmit transmit_power = ' num2str(Sxx) ' dBm'])
 
-%% LoRa signal plots
-% plots frequency spectrum of the modulated signal without noise
-figure(1)
-spectrogram(modulated_signal, 500, 0, 500, sample_frequency, 'yaxis', 'centered')
-title("Clean modulated signal frequency spectrum");
-% plots the 99% occupied bandwidth of the modulated signal without noise
-figure(2)
-obw(modulated_signal, sample_frequency);
-
 %% Noise and attenuation
-interf_sim = InterferenceSimulator(3000); % 3km distance
+interf_sim = InterferenceSimulator(3e3); % 3km distance
 noisy_signal = interf_sim.add_white_noise(modulated_signal, signal_noise_ratio);
-
-%% Noisy signal plots
-% plots frequency spectrum of the noisy modulated signal
-figure(3)
-spectrogram(noisy_signal, 500, 0, 500, sample_frequency, 'yaxis', 'centered')
-title("Noisy modulated signal frequency spectrum")
-% plots the 99% occupied bandwidth of the noisy modulated signal
-figure(4)
-obw(noisy_signal, sample_frequency);
+atten_noisy_signal = interf_sim.attenuate_with_noise(modulated_signal, signal_noise_ratio);
+fspl = interf_sim.calc_fspl(sample_frequency, 0, 0);
+disp(['Free Space Path Loss = ' num2str(fspl) ' dB'])
 
 %% Received Signal
 message_out = LoRa_Rx( ...
-    noisy_signal, ...
+    atten_noisy_signal, ...
     bandwidth, ...
     spreading_factor, ...
     2, ... % non-coherent FSK detection enabled
@@ -62,3 +47,30 @@ message_out = LoRa_Rx( ...
 
 %% Message Out
 disp(['Message Received = ' char(message_out)])
+
+%% LoRa signal plots
+% plots frequency spectrum of the modulated signal without noise
+figure(1)
+spectrogram(modulated_signal, 500, 0, 500, sample_frequency, 'yaxis', 'centered')
+title("Frequency spectrum clean modulated signal");
+% plots the 99% occupied bandwidth of the modulated signal without noise
+figure(2)
+obw(modulated_signal, sample_frequency);
+
+%% Noisy signal plots
+% plots frequency spectrum of the noisy modulated signal
+figure(3)
+spectrogram(noisy_signal, 500, 0, 500, sample_frequency, 'yaxis', 'centered')
+title("Frequency spectrum noisy modulated signal")
+% plots the 99% occupied bandwidth of the noisy modulated signal
+figure(4)
+obw(noisy_signal, sample_frequency);
+
+%% Attenuated noisy signal plots
+% plots frequency spectrum of the attenuated modulated signal (with added noise)
+figure(5)
+spectrogram(atten_noisy_signal, 500, 0, 500, sample_frequency, 'yaxis', 'centered')
+title("Frequency spectrum of attenuated noisy modulated signal")
+% plots the 99% occupied bandwidth of the attenuated noisy modulated signal
+figure(6)
+obw(atten_noisy_signal, sample_frequency);
