@@ -59,19 +59,31 @@ message_out = LoRa_Rx( ...
 disp(['Message Received = ' char(message_out)])
 
 %% LoRa signal plots
-% plots frequency spectrum of the modulated signal without noise
 figure(1)
+clean_tiles = tiledlayout(2, 1);
+
+% plots frequency spectrum of the modulated signal without noise
+nexttile
 spectrogram(modulated_signal, 500, 0, 500, sample_frequency, 'yaxis', 'centered')
 title("Frequency spectrum clean modulated signal");
+
 % plots the 99% occupied bandwidth of the modulated signal without noise
-figure(2)
+nexttile
 obw(modulated_signal, sample_frequency);
 
+exportgraphics(clean_tiles, 'clean_signal.png', 'Resolution', 300)
+
 %% Attenuated noisy signal plots
+figure(2)
+noisy_tiles = tiledlayout(2, 1);
+
 % plots frequency spectrum of the attenuated modulated signal (with added noise)
-figure(3)
+nexttile
 spectrogram(atten_noisy_signal, 500, 0, 500, sample_frequency, 'yaxis', 'centered')
 title("Frequency spectrum of attenuated noisy modulated signal")
+
 % plots the 99% occupied bandwidth of the attenuated noisy modulated signal
-figure(4)
+nexttile
 obw(atten_noisy_signal, sample_frequency);
+
+exportgraphics(noisy_tiles, 'noisy_signal.png', 'Resolution', 300)
