@@ -17,7 +17,6 @@ function [signal_mod] = LoRa_Tx(message,Bandwidth,SF,Pt,Fs,df,varargin)
 % Dr Bassel Al Homssi  
 % RMIT University 
 % Credit to rpp0 on https://github.com/rpp0/gr-lora
-
 if nargin == 6
     CR = 1 ;
     n_preamble = 8 ;
@@ -35,7 +34,6 @@ elseif nargin == 9
     n_preamble = varargin{2} ;
     SyncKey = varargin{3} ;
 end
-
 packet = LoRa_Encode_Full(message,SF,CR) ; % encode message
 signal = LoRa_Modulate_Full(packet,SF,Bandwidth,n_preamble,SyncKey,Fs) ; % LoRa modulate message
 signal_mod = 10.^(Pt./20).*signal.*exp(-j.*2.*pi.*df/Fs.*(0:length(signal)-1))' ; % frquency shift and convert to power
@@ -48,7 +46,6 @@ function [packet] = LoRa_Encode_Full(message,SF,CR)
 %        CR           coding rate 
 %
 %  out:  packet       encoded lora packet 
-
 CRC_pld = 1 ;  % cyclic rate code flag
 imp = 0 ;
 opt = 0 ;
@@ -95,7 +92,6 @@ function [symbols_swp] = LoRa_encode_swap(symbols)
 %   in:  symbols            symbol sequence
 %
 %  out:  symbols_swp        symbols with swapped nibbles
-
 symbols_swp = zeros(1,length(symbols)) ;
 for ctr = 1 : length(symbols)
     symbols_swp(ctr) = bitor(bitsll(bitand(symbols(ctr),hex2dec('0F')),4),bitsra(bitand(symbols(ctr),hex2dec('F0')),4)) ; % swap first half of 8-bit sequencne with other half 
@@ -108,7 +104,6 @@ function [encoded] = LoRa_encode_hamming(symbols,CR)
 %        CR           hamming coding rate 
 %
 %  out:  encoded      hamming encoded symbols
-
 if CR > 2 && CR <= 4 % detection and correction
     n = floor(length(symbols).*(4 + 4)/4) ;
     
@@ -143,7 +138,6 @@ function [symbols_white] = LoRa_encode_white(symbols,CR,DE)
 %        DE           data rate optimization flag
 %
 %  out:  symbols_white      whitened symbols
-
 if DE == 0
     if CR > 2 && CR <= 4
         white_sequence = [255,255,45,255,120,255,225,255,0,255,210,45,85, ...
@@ -213,13 +207,12 @@ function [symbols_shuf] = LoRa_encode_shuffle(symbols)
 %   in:  symbols            symbol vector
 %
 %  out:  symbols_shuf       shuffle symbols
-
 for Ctr = 1 : length(symbols)
-    symbols_binary = dec2bin(symbols(Ctr),8) ;
+    symbols_binary = de2bi(symbols(Ctr),8) ;
     symbols_shuf_binary = [symbols_binary(2) symbols_binary(3) symbols_binary(4) ...
         symbols_binary(6) symbols_binary(5) symbols_binary(1) symbols_binary(7) ...
         symbols_binary(8)] ;
-    symbols_shuf(Ctr) = bin2dec(symbols_shuf_binary) ;
+    symbols_shuf(Ctr) = bi2de(symbols_shuf_binary) ;
 end
 end
 function [symbols_interleaved] = LoRa_encode_interleave(symbols,ppm,rdd)
@@ -231,14 +224,13 @@ function [symbols_interleaved] = LoRa_encode_interleave(symbols,ppm,rdd)
 %        rdd                CR
 %
 %  out:  symbols_interleaved       interleaved symbols
-
 symbols_interleaved = [] ;
 sym_idx_ext = 1 ;
 for block_idx = 1 : floor(length(symbols)/(ppm))
     x = symbols((block_idx-1).*ppm+1:block_idx.*ppm) ;
-    symbols_block_binary = dec2bin(x,4+rdd) ;
+    symbols_block_binary = de2bi(x,4+rdd) ;
     symbols_block_binary_rotated = transpose(symbols_block_binary) ; % transposed 
-    symbols_block_rorated = bin2dec(symbols_block_binary_rotated) ;
+    symbols_block_rorated = bi2de(symbols_block_binary_rotated) ;
     mask = ppm ;
     % rotate
     for ctr = 1 : 4 + rdd
@@ -254,7 +246,6 @@ function [symbols] = LoRa_encode_gray(symbols)
 %   in:  symbols            symbol sequence
 %
 %  out:  symbols            gray coded symbols
-
 % XOR each symbol with a shifted mask
 for ctr = 1 : length(symbols)
     symbols(ctr) = bitxor(symbols(ctr),floor(bitsra(symbols(ctr),16))) ;
@@ -270,10 +261,9 @@ function [symbol_rot] = selectbits_encode(symbol)
 %   in:  symbols            symbol sequence
 %
 %  out:  symbols_rot        symbols for rotation
-
-symbol_binary = dec2bin(symbol,8) ;
+symbol_binary = de2bi(symbol,8) ;
 symbol_binary_rot = [0 symbol_binary(1) symbol_binary(2) symbol_binary(3) 0 symbol_binary(4) 0 0] ;
-symbol_rot = bin2dec(symbol_binary_rot) ;
+symbol_rot = bi2de(symbol_binary_rot) ;
 end
 function [y] = rotl(bits,count,size)
 % rotl modulo rotation
@@ -283,7 +273,6 @@ function [y] = rotl(bits,count,size)
 %        size
 %
 %  out:  y               symbols
-
 len_mask = bitsll(1,size) - 1 ;
 count = mod(count,size) ;
 bits = bitand(bits,len_mask) ;
@@ -301,14 +290,10 @@ function [signal] = LoRa_Modulate_Full(packet,SF,Bandwidth,n_preamble,SyncKey,Fs
 %        Fs             sampling frequency
 %
 %  out:  signal          LoRa IQ packet
-
 signal_prmb = loramod((SyncKey - 1).*ones(1,n_preamble),SF,Bandwidth,Fs,1) ; % preamble upchirps
-
 signal_sync_u = loramod([0 0],SF,Bandwidth,Fs,1) ; % sync upchirp
-
 signal_sync_d1 = loramod(0,SF,Bandwidth,Fs,-1) ; % header downchirp
 signal_sync_d = [signal_sync_d1; signal_sync_d1; signal_sync_d1(1:length(signal_sync_d1)/4)] ; % concatenate header
-
 signal_mesg = loramod(mod(packet + SyncKey,2^SF),SF,Bandwidth,Fs,1) ; % add sync key to payload messaage
 signal = [signal_prmb; signal_sync_u; signal_sync_d; signal_mesg] ; % concatenate LoRa packet
 end
@@ -326,28 +311,22 @@ function [y] = loramod(x,SF,BW,fs,varargin)
 if (nargin < 4)
     error(message('comm:pskmod:numarg1'));
 end
-
 if (nargin > 5)
     error(message('comm:pskmod:numarg2'));
 end
-
 % Check that x is a positive integer
 if (~isreal(x) || any(any(ceil(x) ~= x)) || ~isnumeric(x))
     error(message('comm:pskmod:xreal1'));
 end
-
 M       = 2^SF ;
-
 % Check that M is a positive integer
 if (~isreal(M) || ~isscalar(M) || M<=0 || (ceil(M)~=M) || ~isnumeric(M))
     error(message('comm:pskmod:Mreal'));
 end
-
 % Check that x is within range
 if ((min(min(x)) < 0) || (max(max(x)) > (M-1)))
     error(message('comm:pskmod:xreal2'));
 end
-
 % Polarity of Chirp
 if nargin == 4
     Inv = 1 ;
@@ -357,13 +336,10 @@ end
 % Symbol Constants
 Ts      = 2^SF/BW ;
 Ns      = fs.*M/BW ;
-
 gamma   = x/Ts ;
 beta    = BW/Ts ;
-
 time    = (0:Ns-1)'.*1/fs ;
 freq    = mod(gamma + Inv.*beta.*time,BW) - BW/2 ;
-
 Theta   = cumtrapz(time,freq) ;
 y       = reshape(exp(j.*2.*pi.*Theta),numel(Theta),1) ;
 end

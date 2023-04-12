@@ -1,4 +1,6 @@
-clear all;
+clc;
+clear variables;
+clear global;
 
 %% Signal properties
 spreading_factor = 12; % Spreading Factor
@@ -27,26 +29,30 @@ Sxx = 10 * log10(rms(modulated_signal).^2);
 disp(['Transmit transmit_power = ' num2str(Sxx) ' dBm'])
 
 %% LoRa signal plots
+% plots frequency spectrum of the modulated signal without noise
 figure(1)
 spectrogram(modulated_signal, 500, 0, 500, sample_frequency, 'yaxis', 'centered')
+title("Clean modulated signal frequency spectrum");
+% plots the 99% occupied bandwidth of the modulated signal without noise
 figure(2)
 obw(modulated_signal, sample_frequency);
 
 %% Noise and attenuation
 interf_sim = InterferenceSimulator(3000); % 3km distance
-disp(size(modulated_signal));
-disp(signal_noise_ratio);
 noisy_signal = interf_sim.add_white_noise(modulated_signal, signal_noise_ratio);
 
 %% Noisy signal plots
+% plots frequency spectrum of the noisy modulated signal
 figure(3)
 spectrogram(noisy_signal, 500, 0, 500, sample_frequency, 'yaxis', 'centered')
+title("Noisy modulated signal frequency spectrum")
+% plots the 99% occupied bandwidth of the noisy modulated signal
 figure(4)
 obw(noisy_signal, sample_frequency);
 
 %% Received Signal
 message_out = LoRa_Rx( ...
-    modulated_signal, ...
+    noisy_signal, ...
     bandwidth, ...
     spreading_factor, ...
     2, ... % non-coherent FSK detection enabled
