@@ -25,13 +25,19 @@ modulated_signal = LoRa_Tx( ...
 );
 
 % calculates and prints the transmitted power (should equal the predefined value)
-Sxx = 10 * log10(rms(modulated_signal).^2);
+Sxx = 10 * log10(rms(modulated_signal) .^ 2);
 disp(['Transmit transmit_power = ' num2str(Sxx) ' dBm'])
 
 %% Noise and attenuation
 interf_sim = InterferenceSimulator(3e3); % 3km distance
+
+% modulated signal with added noise
 noisy_signal = interf_sim.add_white_noise(modulated_signal, signal_noise_ratio);
-atten_noisy_signal = interf_sim.attenuate_with_noise(modulated_signal, signal_noise_ratio);
+% modulated signal with attenuation as well as added noise
+atten_noisy_signal = interf_sim.attenuate_with_noise( ...
+    modulated_signal, sample_frequency, signal_noise_ratio ...
+);
+
 fspl = interf_sim.calc_fspl(sample_frequency, 0, 0);
 disp(['Free Space Path Loss = ' num2str(fspl) ' dB'])
 

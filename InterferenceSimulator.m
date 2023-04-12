@@ -16,22 +16,28 @@ classdef InterferenceSimulator
             %% Calculates the Free Space Path Loss for a 2 transceiver system
 
             % takes into account the gains of the transceiver antennas
-            output_arg = fspl(obj.distance, 300000000/frequency) - gain_tx - gain_rx;
+            output_arg = fspl(obj.distance, physconst('LightSpeed')/frequency) - gain_tx - gain_rx;
         end
 
-        function output_arg = attenuate(obj, input_signal)
+        function output_arg = attenuate(obj, input_signal, frequency)
             %% Attenuates the signal using the distance between the transceivers
 
-            distance_km = obj.distance / 1000;
-            % signal strength is proportional to the inverse square of distance
-            coefficient = 1 / (distance_km^2);
-            output_arg = coefficient * input_signal;
+            transmit_power = 10 * log10(rms(input_signal) .^ 2);
+            fspl = calc_fspl(obj, frequency, 0, 0);
+            receive_power = transmit_power / fspl;
+
+            output_arg = input_signal * (receive_power / transmit_power);
         end
 
-        function output_arg = attenuate_with_noise(obj, input_signal, signal_noise_ratio)
+        function output_arg = attenuate_with_noise(obj, input_signal, frequency, signal_noise_ratio)
+            %% Attenuates and applies noise to the LoRa signal (noise does not get attenuated)
+
+            % generates noise using only a signal to noise ratio
             noisy_signal = add_white_noise(obj, input_signal, signal_noise_ratio);
+            % separates noise from the input signal
             noise = noisy_signal - input_signal;
-            output_arg = attenuate(obj, input_signal) + noise;
+
+            output_arg = attenuate(obj, input_signal, frequency) + noise;
         end
 
         function output_arg = gen_white_noise(~, noise_power, load_impedance, num_rows, num_cols)
