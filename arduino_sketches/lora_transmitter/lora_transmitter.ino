@@ -10,6 +10,8 @@ void setup() {
   while (!Serial);
 
   Serial.println("LoRa Sender");
+  const long frequency = 868E6;
+  LoRa.setSPIFrequency(frequency);
 
   if (!LoRa.begin(915E6)) {
     Serial.println("Starting LoRa failed!");
