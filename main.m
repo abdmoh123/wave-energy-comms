@@ -3,17 +3,21 @@ clear variables;
 clear global;
 
 %% Signal properties
-spreading_factor = 12; % Spreading Factor
+spreading_factor = 10; % Spreading Factor
 bandwidth = 125e3; % Bandwidth
-sample_frequency = 10e6; % Sampling frequency
-carrier_frequency_offset = 915e6 - 921.5e6; % Frequency offset
+carrier_frequency = 868e6; % LoRa frequency band (868MHz = license exempt)
 transmit_power = 14; % Transmission power (in dBm)
 signal_noise_ratio = -5; % Signal Noise Ratio
-lora_frequency = 868e6; % 868MHz LoRa band is used (license exempt)
 
 % Message/payload being transmitted
-message = "emf:10.0;acc:3;.;";
+message = "Hello World!";
 disp(['Message sent = ' char(message)])
+
+%% Sampling
+sample_frequency = 15e6; % Sampling frequency (must satsify nyquist: >2x frequency_offset)
+spectrum_centre_frequency = 874.5e6;
+% offset is used to circumvent running out of memory (too many samples)
+frequency_offset = spectrum_centre_frequency - carrier_frequency;
 
 %% Transmit Signal
 modulated_signal = LoRa_Tx( ...
@@ -22,7 +26,7 @@ modulated_signal = LoRa_Tx( ...
     spreading_factor, ...
     transmit_power, ...
     sample_frequency, ...
-    carrier_frequency_offset ...
+    frequency_offset ...
 );
 
 % calculates and prints the transmitted power (should equal the predefined value)
@@ -34,11 +38,11 @@ interf_sim = InterferenceSimulator(3e3); % 3km distance
 
 % modulated signal with attenuation as well as added noise
 atten_noisy_signal = interf_sim.attenuate_with_noise( ...
-    modulated_signal, lora_frequency, 0, 0, signal_noise_ratio ...
+    modulated_signal, carrier_frequency, 0, 0, signal_noise_ratio ...
 );
 
 % calcuates and prints the Free Space Path Loss
-fspl = interf_sim.calc_fspl(lora_frequency, 0, 0);
+fspl = interf_sim.calc_fspl(carrier_frequency, 0, 0);
 disp(['Free Space Path Loss = ' num2str(fspl) ' dB'])
 
 % calculates and prints the transmitted power
@@ -52,7 +56,7 @@ message_out = LoRa_Rx( ...
     spreading_factor, ...
     2, ... % non-coherent FSK detection enabled
     sample_frequency, ...
-    carrier_frequency_offset ...
+    frequency_offset ...
 );
 
 %% Message Out
