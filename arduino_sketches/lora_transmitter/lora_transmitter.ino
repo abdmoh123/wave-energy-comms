@@ -1,4 +1,5 @@
 // #include <ArduinoLowPower.h>
+#include <SPI.h>
 #include <LoRa.h>
 
 const double MAX_EMF_VOLTAGE = 15.0;
@@ -10,11 +11,9 @@ void setup() {
   while (!Serial);
 
   Serial.println("LoRa Sender");
-  const long frequency = 868E6;
-  LoRa.setSPIFrequency(frequency);
 
   // halts program if lora failed to start
-  if (!LoRa.begin(915E6)) {
+  if (!LoRa.begin(868E6)) {
     Serial.println("Starting LoRa failed!");
     while (1);
   }
@@ -44,11 +43,13 @@ void loop() {
   // sends packet with data
   LoRa.beginPacket();
   LoRa.print(emf_volt);
+  LoRa.print(" "); // space is used to separate each data value
   LoRa.print(acc_volt);
   LoRa.endPacket();
 
   // advances counter
   counter++;
 
-  delay(5000);
+  // delays/waits for 0.5s
+  delay(500);
 }
