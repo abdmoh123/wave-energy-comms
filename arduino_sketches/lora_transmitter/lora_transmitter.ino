@@ -19,10 +19,10 @@ void setup() {
   // Serial.println("LoRa Transmitter");
 
   // halts program if lora failed to start
-  // if (!LoRa.begin(868E6)) {
-  //   Serial.println("Starting LoRa failed!");
-  //   while (1);
-  // }
+  if (!LoRa.begin(868E6)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
   
   // Try to initialize!
   if (!mpu.begin()) {
@@ -45,6 +45,8 @@ double gen_voltage(double time) {
   // generates a value between 15 and 7.5 Hz (varying frequency)
   double frequency_value = EMF_MAX_FREQUENCY * ((sin(PI * time) / 4) + 0.75); // frequency changes every 2 cycles
   double voltage = MAX_EMF_VOLTAGE * sin(frequency_value * 2 * PI * time);
+
+  // prints voltage data (for plotting)
   Serial.print("EMF:");
   Serial.print(voltage);
   Serial.print(",");
@@ -53,13 +55,13 @@ double gen_voltage(double time) {
   Serial.print(",");
   Serial.print("Time:");
   Serial.println(time);
+
   return voltage;
 }
 
 void loop() {
   // generates and prints simulated emf voltage
   double emf_volt = gen_voltage(time);
-  
   
   // get new sensor events with the readings
   sensors_event_t accelerometer, gyroscope, thermometer;
@@ -70,56 +72,57 @@ void loop() {
   double y_acc = accelerometer.acceleration.y;
   double z_acc = accelerometer.acceleration.z;
   // prints out the values
-  // Serial.print("Acceleration X: ");
-  // Serial.print(x_acc);
-  // Serial.print(", Y: ");
-  // Serial.print(y_acc);
-  // Serial.print(", Z: ");
-  // Serial.print(z_acc);
-  // Serial.println(" m/s^2");
+  Serial.print("AccelerationX:");
+  Serial.print(x_acc);
+  Serial.print(",");
+  Serial.print("AccelerationY");
+  Serial.print(y_acc);
+  Serial.print(",");
+  Serial.print("AccelerationZ");
+  Serial.println(z_acc);
   
   // gets x y z rotation
   double x_rot = gyroscope.gyro.x;
   double y_rot = gyroscope.gyro.y;
   double z_rot = gyroscope.gyro.z;
   // prints out the values
-  // Serial.print("Rotation X: ");
-  // Serial.print(x_rot);
-  // Serial.print(", Y: ");
-  // Serial.print(y_rot);
-  // Serial.print(", Z: ");
-  // Serial.print(z_rot);
-  // Serial.println(" rad/s");
+  Serial.print("RotationX:");
+  Serial.print(x_rot);
+  Serial.print(",");
+  Serial.print("RotationX:");
+  Serial.print(y_rot);
+  Serial.print(",");
+  Serial.print("RotationX:");
+  Serial.println(z_rot);
 
   // gets and prints the temperature
   double temperature = thermometer.temperature;
-  // Serial.print("Temperature: ");
-  // Serial.print(temperature);
-  // Serial.println(" degC");
+  Serial.print("Temperature:");
+  Serial.println(temperature);
 
   // Serial.println("");
 
-  // Serial.println("Sending packet...");
-  // // sends packet with data
-  // LoRa.beginPacket();
-  // LoRa.print(emf_volt);
-  // LoRa.print(" "); // space is used to separate each data value
-  // LoRa.print(x_acc);
-  // LoRa.print(" ");
-  // LoRa.print(x_rot);
-  // LoRa.print(" ");
-  // LoRa.print(y_acc);
-  // LoRa.print(" ");
-  // LoRa.print(y_rot);
-  // LoRa.print(" ");
-  // LoRa.print(z_acc);
-  // LoRa.print(" ");
-  // LoRa.print(z_rot);
-  // LoRa.endPacket();
-  // Serial.println("Packet sent!");
+  Serial.println("Sending packet...");
+  // sends packet with data
+  LoRa.beginPacket();
+  LoRa.print(emf_volt);
+  LoRa.print(" "); // space is used to separate each data value
+  LoRa.print(x_acc);
+  LoRa.print(" ");
+  LoRa.print(x_rot);
+  LoRa.print(" ");
+  LoRa.print(y_acc);
+  LoRa.print(" ");
+  LoRa.print(y_rot);
+  LoRa.print(" ");
+  LoRa.print(z_acc);
+  LoRa.print(" ");
+  LoRa.print(z_rot);
+  LoRa.endPacket();
+  Serial.println("Packet sent!");
 
   // advances counter
   time += SAMPLE_PERIOD;
-  // delays/waits for 1/15 s
+  // delays/waits for 1/15s (Sample period * 1000 due to s -> ms conversion)
   delay(SAMPLE_PERIOD * 1000);
 }
