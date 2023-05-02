@@ -1,49 +1,75 @@
 #include <SPI.h>
 #include <LoRa.h>
-#include <Ethernet.h>
+#include <SD.h>
 
-// mac address must be unique
-byte mac_address[] = {
-	0xAB, 0xFE, 0xFF, 0xFB, 0xEB, 0xCD
-};
-// might need to be changed
-IPAddress ip(192, 168, 0, 78);
-
-// Ethernet server is initialised
-// port 80 is default for HTTP
-EthernetServer server(80);
+String data_row = "";
+const int NUM_DATA = 8; // 8 pieces of data
+bool dispose_packet = false;
 
 void setup() {
-  Ethernet.init(5); // Ethernet shield
-  
   Serial.begin(9600);
   while (!Serial);
-  Serial.println("LoRa Receiver");
 
-  // halts program if lora failed to start
+  Serial.println("Initialising LoRa...");
+  // checks if LoRa starts successfully
   if (!LoRa.begin(868E6)) {
     Serial.println("Starting LoRa failed!");
-    while (1);
+    while (1); // halts the program
   }
-  
-  // starts the Ethernet connection and server
-  Ethernet.begin(mac_address, ip);
-  
-  // check for Ethernet hardware present
-  if (Ethernet.hardwareStatus() == EthernetNoHardware) {
-    Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
-    while (true) {
-      delay(1); // do nothing, no point running without Ethernet hardware
+  LoRa.setSpreadingFactor(9);
+  Serial.println("LoRa started successfully!");
+
+  Serial.println("Initializing SD card...");
+  // checks if the card is present and can be initialized:
+  if (!SD.begin(4)) {
+    Serial.println("Card failed, or not present!");
+    while (1); // halts the program
+  }
+  Serial.println("Card initialized!");
+
+}
+
+double * separate_data(String input_string, char delimiter) {
+  /* Converts a data packet string into an array of data */
+
+  double temp_data_array[NUM_DATA];
+
+  for (int i = 0; i < NUM_DATA; ++i) {
+    // if the packet was corrupted, the number of spaces might be lower than expected
+    if (input_string.length() == 0) {
+      // packet is disposed if it is corrupted
+      dispose_packet = true;
+      break;
     }
-  }
-  if (Ethernet.linkStatus() == LinkOFF) {
-    Serial.println("Ethernet cable is not connected.");
+
+    // separates data in packet using the delimiter ' '.
+    int index = input_string.indexOf(delimiter);
+    // converts string to double. If conversion fails (due to corruption), it could = 0.
+    temp_data_array[i] = input_string.substring(0, index).toDouble();
+
+    // read data is removed from string
+    input_string = input_string.substring(index + 1);
   }
 
-  // start the server
-  server.begin();
-  Serial.print("server is at ");
-  Serial.println(Ethernet.localIP());
+  return temp_data_array;
+}
+
+void log_data(double * input_data_array) {
+  /* Writes received data to a CSV file in the SD card */
+
+  File csv_file = SD.open("data.csv", FILE_WRITE);
+
+  if (csv_file) {
+    csv_file.print(input_data_array[0]);
+    for (int i = 1; i < NUM_DATA; ++i) {
+      csv_file.print(',');
+      csv_file.print(input_data_array[i]);
+    }
+    csv_file.println(""); // adds a new line to the file
+  }
+  else {
+    Serial.println("Failed to open data.csv!");
+  }
 }
 
 void loop() {
@@ -56,61 +82,36 @@ void loop() {
 
     // read packet
     while (LoRa.available()) {
-      Serial.print((char)LoRa.read());
+      data_row.concat((char) LoRa.read());
     }
+    Serial.print(data_row);
+
+    // seperates data in packet and puts it in an array
+    double * data_array = {};
+    data_array = separate_data(data_row, ' ');
+    // resets data row
+    data_row = "";
 
     // print RSSI of packet
     Serial.print("' with RSSI ");
     Serial.println(LoRa.packetRssi());
-  }
-  
-  // listen for incoming clients
-  EthernetClient client = server.available();
-  if (client) {
-    Serial.println("new client");
-    // an http request ends with a blank line
-    boolean currentLineIsBlank = true;
-    while (client.connected()) {
-      if (client.available()) {
-        char c = client.read();
-        Serial.write(c);
-        // if you've gotten to the end of the line (received a newline
-        // character) and the line is blank, the http request has ended,
-        // so you can send a reply
-        if (c == '\n' && currentLineIsBlank) {
-          // send a standard http response header
-          client.println("HTTP/1.1 200 OK");
-          client.println("Content-Type: text/html");
-          client.println("Connection: close");  // the connection will be closed after completion of the response
-          client.println("Refresh: 5");  // refresh the page automatically every 5 sec
-          client.println();
-          client.println("<!DOCTYPE HTML>");
-          client.println("<html>");
-          // output the value of each analog input pin
-          for (int analogChannel = 0; analogChannel < 6; analogChannel++) {
-            int sensorReading = analogRead(analogChannel);
-            client.print("analog input ");
-            client.print(analogChannel);
-            client.print(" is ");
-            client.print(sensorReading);
-            client.println("<br />");
-          }
-          client.println("</html>");
-          break;
-        }
-        if (c == '\n') {
-          // you're starting a new line
-          currentLineIsBlank = true;
-        } else if (c != '\r') {
-          // you've gotten a character on the current line
-          currentLineIsBlank = false;
-        }
-      }
+
+    if (dispose_packet) {
+      Serial.println("Data packet corrupted!");
+      dispose_packet = false;
     }
-    // give the web browser time to receive the data
-    delay(1);
-    // close the connection:
-    client.stop();
-    Serial.println("client disconnected");
+    else {
+      Serial.println("Data read successfully!");
+      // prints contents of the array
+      Serial.print("[");
+      for (int i = 0; i < NUM_DATA; ++i) {
+        Serial.print(data_array[i]);
+        Serial.print(" ");
+      }
+      Serial.println("]");
+
+      // saves data to a CSV file
+      log_data(data_array);
+    }
   }
 }
