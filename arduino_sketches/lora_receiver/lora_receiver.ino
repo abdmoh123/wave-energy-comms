@@ -1,10 +1,9 @@
 #include <SPI.h>
 #include <LoRa.h>
 #include <SD.h>
+#include <ctype.h>
 
-String data_row = "";
 const int NUM_DATA = 7; // 7 pieces of data
-bool dispose_packet = false;
 
 void setup() {
   Serial.begin(9600);
@@ -28,44 +27,72 @@ void setup() {
   Serial.println("LoRa started successfully!");
 }
 
-double * separate_data(String input_string, char delimiter) {
-  /* Converts a data packet string into an array of data */
+bool verify_data(String data) {
+  /* Verifies whether or not the data is a valid double */
 
-  double * temp_data_array;
+  bool point_found = false;
+  bool sign_found = false;
 
-  for (int i = 0; i < NUM_DATA; ++i) {
-    // if the packet was corrupted, the number of spaces might be lower than expected
-    if (input_string.length() == 0) {
-      // packet is disposed if it is corrupted
-      dispose_packet = true;
-      break;
+  for (auto c : data) {
+    // ensures that a maximum of 1 decimal point is found per data (multiple points is invalid)
+    if (c == '.') {
+      if (point_found == false) { point_found = true; }
+      else { return false; }
     }
-
-    // separates data in packet using the delimiter ' '.
-    int index = input_string.indexOf(delimiter);
-    // converts string to double. If conversion fails (due to corruption), it could = 0.
-    temp_data_array[i] = input_string.substring(0, index).toDouble();
-    Serial.println(temp_data_array[i]);
-
-    // read data is removed from string
-    input_string = input_string.substring(index + 1);
+    // ensures that a maximum of 1 '-' sign is found per data (multiple negative signs is invalid)
+    else if (c == '-') {
+      if (sign_found == false) { sign_found = true; }
+      else {
+        return false;
+      }
+    }
+    // returns false if the data contained any character that isn't a digit (except '.' and '-')
+    else if (!isDigit(c)) {
+      return false;
+    }
   }
-
-  return temp_data_array;
+  // if none of the criteria above are triggered, then the data is a valid double
+  return true;
 }
 
-void log_data(double * input_data_array) {
+bool verify_packet(String packet_content, char delimiter) {
+  /* Verifies the integrity of the packet (checks for missing data or corruption) */
+  int num_spacers = 0;
+  int delimiter_index = 0;
+
+  String packet_copy = packet_content;
+
+  while (packet_copy.length() > 0) {
+    // checks if a data spacer is found
+    delimiter_index = packet_copy.indexOf(delimiter);
+    // stops the search if no delimiter characters were found
+    if (delimiter_index == -1) {
+      break;
+    }
+    ++num_spacers;
+
+    // if the data is not a valid double, then the packet is corrupted (invalid)
+    if (!verify_data(packet_copy.substring(0, delimiter_index))) { return false; }
+    // cuts the string so it can be iterated through indexOf
+    packet_copy = packet_copy.substring(delimiter_index + 1);
+  }
+  Serial.print("Number of spacers: ");
+  Serial.println(num_spacers);
+
+  // packet is considered valid if there are the correct amount of spacers (delimiter)
+  if (num_spacers == NUM_DATA - 1) { return true; }
+  // if incorrect number of spacers found, then some data is missing
+  return false;
+}
+
+void log_data(String packet_content) {
   /* Writes received data to a CSV file in the SD card */
 
   File csv_file = SD.open("data.csv", FILE_WRITE);
 
   if (csv_file) {
-    csv_file.print(input_data_array[0]);
-    for (int i = 1; i < NUM_DATA; ++i) {
-      csv_file.print(',');
-      csv_file.print(input_data_array[i]);
-    }
-    csv_file.println(""); // adds a new line to the file
+    // appends the data to the file
+    csv_file.println(packet_content);
   }
   else {
     Serial.println("Failed to open data.csv!");
@@ -74,9 +101,10 @@ void log_data(double * input_data_array) {
 
 void loop() {
   // try to parse packet
-  int packetSize = LoRa.parsePacket();
+  int packet_size = LoRa.parsePacket();
+  String data_row = ""; // initialises the data row to be empty
   
-  if (packetSize) {
+  if (packet_size) {
     // received a packet
     Serial.print("Received packet '");
 
@@ -87,32 +115,21 @@ void loop() {
     }
     Serial.print(data_row);
 
-    // seperates data in packet and puts it in an array
-    double * data_array = {};
-    data_array = separate_data(data_row, ' ');
-    // resets data row
-    data_row = "";
-
     // print RSSI of packet
     Serial.print("' with RSSI ");
     Serial.println(LoRa.packetRssi());
 
-    if (dispose_packet) {
+    if (!verify_packet(data_row, ' ')) {
       Serial.println("Data packet corrupted!");
-      dispose_packet = false;
     }
     else {
       Serial.println("Data read successfully!");
-      // prints contents of the array
-      Serial.print("[");
-      for (int i = 0; i < NUM_DATA; ++i) {
-        Serial.print(data_array[i]);
-        Serial.print(" ");
-      }
-      Serial.println("]");
+      // converts the spaces to commas (for csv file)
+      data_row.replace(" ", ",");
+      Serial.println(data_row);
 
       // saves data to a CSV file
-      // log_data(data_array);
+      // log_data(data_row);
     }
   }
 }
