@@ -3,12 +3,20 @@
 #include <SD.h>
 
 String data_row = "";
-const int NUM_DATA = 8; // 8 pieces of data
+const int NUM_DATA = 7; // 7 pieces of data
 bool dispose_packet = false;
 
 void setup() {
   Serial.begin(9600);
   while (!Serial);
+
+  // Serial.println("Initializing SD card...");
+  // // checks if the card is present and can be initialized:
+  // if (!SD.begin(4)) {
+  //   Serial.println("Card failed, or not present!");
+  //   while (1); // halts the program
+  // }
+  // Serial.println("Card initialized!");
 
   Serial.println("Initialising LoRa...");
   // checks if LoRa starts successfully
@@ -16,23 +24,14 @@ void setup() {
     Serial.println("Starting LoRa failed!");
     while (1); // halts the program
   }
-  LoRa.setSpreadingFactor(9);
+  // LoRa.setSpreadingFactor(9);
   Serial.println("LoRa started successfully!");
-
-  Serial.println("Initializing SD card...");
-  // checks if the card is present and can be initialized:
-  if (!SD.begin(4)) {
-    Serial.println("Card failed, or not present!");
-    while (1); // halts the program
-  }
-  Serial.println("Card initialized!");
-
 }
 
 double * separate_data(String input_string, char delimiter) {
   /* Converts a data packet string into an array of data */
 
-  double temp_data_array[NUM_DATA];
+  double * temp_data_array;
 
   for (int i = 0; i < NUM_DATA; ++i) {
     // if the packet was corrupted, the number of spaces might be lower than expected
@@ -46,6 +45,7 @@ double * separate_data(String input_string, char delimiter) {
     int index = input_string.indexOf(delimiter);
     // converts string to double. If conversion fails (due to corruption), it could = 0.
     temp_data_array[i] = input_string.substring(0, index).toDouble();
+    Serial.println(temp_data_array[i]);
 
     // read data is removed from string
     input_string = input_string.substring(index + 1);
@@ -82,7 +82,8 @@ void loop() {
 
     // read packet
     while (LoRa.available()) {
-      data_row.concat((char) LoRa.read());
+      // combines all characters in packet to a string
+      data_row = data_row + ((char) LoRa.read());
     }
     Serial.print(data_row);
 
@@ -111,7 +112,7 @@ void loop() {
       Serial.println("]");
 
       // saves data to a CSV file
-      log_data(data_array);
+      // log_data(data_array);
     }
   }
 }
