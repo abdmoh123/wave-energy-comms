@@ -9,13 +9,13 @@ void setup() {
   Serial.begin(9600);
   while (!Serial);
 
-  // Serial.println("Initializing SD card...");
-  // // checks if the card is present and can be initialized:
-  // if (!SD.begin(4)) {
-  //   Serial.println("Card failed, or not present!");
-  //   while (1); // halts the program
-  // }
-  // Serial.println("Card initialized!");
+  Serial.println("Initializing SD card...");
+  // checks if the card is present and can be initialized:
+  if (!SD.begin(4)) {
+    Serial.println("Card failed, or not present!");
+    while (1); // halts the program
+  }
+  Serial.println("Card initialized!");
 
   Serial.println("Initialising LoRa...");
   // checks if LoRa starts successfully
@@ -93,6 +93,8 @@ void log_data(String packet_content) {
   if (csv_file) {
     // appends the data to the file
     csv_file.println(packet_content);
+    csv_file.close();
+    Serial.println("Data written to file!");
   }
   else {
     Serial.println("Failed to open data.csv!");
@@ -129,7 +131,7 @@ void loop() {
       Serial.println(data_row);
 
       // saves data to a CSV file
-      // log_data(data_row);
+      log_data(data_row);
     }
   }
 }
