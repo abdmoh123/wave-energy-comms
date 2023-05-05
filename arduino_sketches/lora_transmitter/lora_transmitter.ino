@@ -8,18 +8,22 @@
 const double MAX_EMF_VOLTAGE = 20.0;
 const double EMF_MAX_FREQUENCY = 15.0;
 const double SAMPLE_PERIOD = 1.0 / (10.0 * EMF_MAX_FREQUENCY); // x2 satisfies nyquist
+double time = 0.0; // for simulating emf voltage
 
 Adafruit_MPU6050 mpu;
-double time = 0.0;
+Adafruit_Sensor *acc_sensor, *gyro_sensor, *temp_sensor;
+// variables to cancel out any errors in measurements
 double x_rot_error = 0.0;
 double y_rot_error = 0.0;
 double z_rot_error = 0.0;
+double x_acc_error = 0.0;
+double y_acc_error = 0.0;
+double z_acc_error = 0.0;
 
 void setup() {
   Serial.begin(9600);
   while (!Serial);
 
-  Serial.println("LoRa Transmitter");
   // halts program if lora failed to start
   if (!LoRa.begin(868E6)) {
     Serial.println("Starting LoRa failed!");
@@ -27,26 +31,28 @@ void setup() {
   }
   Serial.println("LoRa successful!");
   
-  // Try to initialize!
+  // tries to initialize mpu6050 sensor
   if (!mpu.begin()) {
     Serial.println("Failed to find MPU6050 chip");
     while (1) { LowPower.deepSleep(3600000); } // deep sleeps (1h) to save power
   }
-  // mpu.reset(); // resets sensor
   mpu.setAccelerometerRange(MPU6050_RANGE_8_G); // set accelerometer range to +-8G
   mpu.setGyroRange(MPU6050_RANGE_500_DEG); // set gyro range to +- 500 deg/s
   mpu.setFilterBandwidth(MPU6050_BAND_5_HZ); // set low pass filter bandwidth to 5 Hz (improves stability)
 
-  // sets the error values to calibrate the sensor
-  Adafruit_Sensor * gyro_sensor = mpu.getGyroSensor();
-  sensors_event_t gyro_event;
+  // gets data from the sensor for calibration
+  acc_sensor = mpu.getAccelerometerSensor();
+  gyro_sensor = mpu.getGyroSensor();
+  sensors_event_t acc_event, gyro_event;
+  acc_sensor->getEvent(&acc_event);
   gyro_sensor->getEvent(&gyro_event);
-  double x_rot = gyro_event.gyro.x;
-  double y_rot = gyro_event.gyro.y;
-  double z_rot = gyro_event.gyro.z;
-  x_rot_error = x_rot;
-  y_rot_error = y_rot;
-  z_rot_error = z_rot;
+  // sets the error values to calibrate the sensors
+  x_acc_error = acc_event.acceleration.x - 9.81; // ignores influence of gravity
+  y_acc_error = acc_event.acceleration.y;
+  z_acc_error = acc_event.acceleration.z;
+  x_rot_error = gyro_event.gyro.x;
+  y_rot_error = gyro_event.gyro.y;
+  z_rot_error = gyro_event.gyro.z;
 }
 
 double gen_voltage(double time) {
@@ -64,10 +70,6 @@ double gen_voltage(double time) {
   Serial.println(time);
 
   return voltage;
-}
-
-void calibrate_gyro(double x_rot_in, double y_rot_in, double z_rot_in) {
-  
 }
 
 void loop() {
@@ -110,8 +112,6 @@ void loop() {
   double temp = thermometer.temperature;
   Serial.print("temp:");
   Serial.println(temp);
-
-  // Serial.println("");
 
   Serial.println("\nSending packet...");
   // sends packet with data
