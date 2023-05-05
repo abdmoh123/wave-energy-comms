@@ -1,4 +1,4 @@
-// #include <ArduinoLowPower.h>
+#include <ArduinoLowPower.h>
 #include <SPI.h>
 #include <LoRa.h>
 #include <Adafruit_MPU6050.h>
@@ -9,34 +9,44 @@ const double MAX_EMF_VOLTAGE = 20.0;
 const double EMF_MAX_FREQUENCY = 15.0;
 const double SAMPLE_PERIOD = 1.0 / (10.0 * EMF_MAX_FREQUENCY); // x2 satisfies nyquist
 
-double time = 0.0;
 Adafruit_MPU6050 mpu;
+double time = 0.0;
+double x_rot_error = 0.0;
+double y_rot_error = 0.0;
+double z_rot_error = 0.0;
 
 void setup() {
   Serial.begin(9600);
   while (!Serial);
 
-  // Serial.println("LoRa Transmitter");
-
+  Serial.println("LoRa Transmitter");
   // halts program if lora failed to start
   if (!LoRa.begin(868E6)) {
     Serial.println("Starting LoRa failed!");
-    while (1);
+    while (1) { LowPower.deepSleep(3600000); } // deep sleeps (1h) to save power
   }
+  Serial.println("LoRa successful!");
   
   // Try to initialize!
   if (!mpu.begin()) {
-    // Serial.println("Failed to find MPU6050 chip");
-    while (1) {
-      delay(10);
-    }
+    Serial.println("Failed to find MPU6050 chip");
+    while (1) { LowPower.deepSleep(3600000); } // deep sleeps (1h) to save power
   }
-  // set accelerometer range to +-8G
-  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
-  // set gyro range to +- 500 deg/s
-  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
-  // set filter bandwidth to 21 Hz
-  mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+  // mpu.reset(); // resets sensor
+  mpu.setAccelerometerRange(MPU6050_RANGE_8_G); // set accelerometer range to +-8G
+  mpu.setGyroRange(MPU6050_RANGE_500_DEG); // set gyro range to +- 500 deg/s
+  mpu.setFilterBandwidth(MPU6050_BAND_5_HZ); // set low pass filter bandwidth to 5 Hz (improves stability)
+
+  // sets the error values to calibrate the sensor
+  Adafruit_Sensor * gyro_sensor = mpu.getGyroSensor();
+  sensors_event_t gyro_event;
+  gyro_sensor->getEvent(&gyro_event);
+  double x_rot = gyro_event.gyro.x;
+  double y_rot = gyro_event.gyro.y;
+  double z_rot = gyro_event.gyro.z;
+  x_rot_error = x_rot;
+  y_rot_error = y_rot;
+  z_rot_error = z_rot;
 }
 
 double gen_voltage(double time) {
@@ -47,22 +57,23 @@ double gen_voltage(double time) {
   double voltage = MAX_EMF_VOLTAGE * sin(frequency_value * 2 * PI * time);
 
   // prints voltage data (for plotting)
-  Serial.print("EMF:");
+  Serial.print("emf_volt:");
   Serial.print(voltage);
   Serial.print(",");
-  Serial.print("Frequency:");
-  Serial.print(frequency_value);
-  Serial.print(",");
-  Serial.print("Time:");
+  Serial.print("t:");
   Serial.println(time);
 
   return voltage;
 }
 
+void calibrate_gyro(double x_rot_in, double y_rot_in, double z_rot_in) {
+  
+}
+
 void loop() {
   // generates and prints simulated emf voltage
   double emf_volt = gen_voltage(time);
-  
+    
   // get new sensor events with the readings
   sensors_event_t accelerometer, gyroscope, thermometer;
   mpu.getEvent(&accelerometer, &gyroscope, &thermometer);
@@ -72,37 +83,37 @@ void loop() {
   double y_acc = accelerometer.acceleration.y;
   double z_acc = accelerometer.acceleration.z;
   // prints out the values
-  Serial.print("AccelerationX:");
+  Serial.print("x_acc:");
   Serial.print(x_acc);
   Serial.print(",");
-  Serial.print("AccelerationY");
+  Serial.print("y_acc:");
   Serial.print(y_acc);
   Serial.print(",");
-  Serial.print("AccelerationZ");
+  Serial.print("z_acc:");
   Serial.println(z_acc);
   
   // gets x y z rotation
-  double x_rot = gyroscope.gyro.x;
-  double y_rot = gyroscope.gyro.y;
-  double z_rot = gyroscope.gyro.z;
+  double x_rot = gyroscope.gyro.x - x_rot_error;
+  double y_rot = gyroscope.gyro.y - y_rot_error;
+  double z_rot = gyroscope.gyro.z - z_rot_error;
   // prints out the values
-  Serial.print("RotationX:");
+  Serial.print("x_rot:");
   Serial.print(x_rot);
   Serial.print(",");
-  Serial.print("RotationX:");
+  Serial.print("y_rot:");
   Serial.print(y_rot);
   Serial.print(",");
-  Serial.print("RotationX:");
+  Serial.print("z_rot:");
   Serial.println(z_rot);
 
   // gets and prints the temperature
-  double temperature = thermometer.temperature;
-  Serial.print("Temperature:");
-  Serial.println(temperature);
+  double temp = thermometer.temperature;
+  Serial.print("temp:");
+  Serial.println(temp);
 
   // Serial.println("");
 
-  Serial.println("Sending packet...");
+  Serial.println("\nSending packet...");
   // sends packet with data
   LoRa.beginPacket();
   LoRa.print(emf_volt);
@@ -119,7 +130,7 @@ void loop() {
   LoRa.print(" ");
   LoRa.print(z_rot);
   LoRa.endPacket();
-  Serial.println("Packet sent!");
+  Serial.println("Packet sent!\n");
 
   // advances counter
   time += SAMPLE_PERIOD;
