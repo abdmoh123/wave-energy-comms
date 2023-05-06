@@ -12,6 +12,7 @@ double time = 0.0; // for simulating emf voltage
 
 Adafruit_MPU6050 mpu;
 Adafruit_Sensor *acc_sensor, *gyro_sensor, *temp_sensor;
+sensors_event_t accelerometer, gyroscope, thermometer;
 // variables to cancel out any errors in measurements
 double x_rot_error = 0.0;
 double y_rot_error = 0.0;
@@ -43,16 +44,16 @@ void setup() {
   // gets data from the sensor for calibration
   acc_sensor = mpu.getAccelerometerSensor();
   gyro_sensor = mpu.getGyroSensor();
-  sensors_event_t acc_event, gyro_event;
-  acc_sensor->getEvent(&acc_event);
-  gyro_sensor->getEvent(&gyro_event);
+  temp_sensor = mpu.getTemperatureSensor();
+  acc_sensor->getEvent(&accelerometer);
+  gyro_sensor->getEvent(&gyroscope);
   // sets the error values to calibrate the sensors
-  x_acc_error = acc_event.acceleration.x - 9.81; // ignores influence of gravity
-  y_acc_error = acc_event.acceleration.y;
-  z_acc_error = acc_event.acceleration.z;
-  x_rot_error = gyro_event.gyro.x;
-  y_rot_error = gyro_event.gyro.y;
-  z_rot_error = gyro_event.gyro.z;
+  x_acc_error = accelerometer.acceleration.x - 9.81; // ignores influence of gravity
+  y_acc_error = accelerometer.acceleration.y;
+  z_acc_error = accelerometer.acceleration.z;
+  x_rot_error = gyroscope.gyro.x;
+  y_rot_error = gyroscope.gyro.y;
+  z_rot_error = gyroscope.gyro.z;
 }
 
 double gen_voltage(double time) {
@@ -77,8 +78,9 @@ void loop() {
   double emf_volt = gen_voltage(time);
     
   // get new sensor events with the readings
-  sensors_event_t accelerometer, gyroscope, thermometer;
-  mpu.getEvent(&accelerometer, &gyroscope, &thermometer);
+  acc_sensor->getEvent(&accelerometer);
+  gyro_sensor->getEvent(&gyroscope);
+  temp_sensor->getEvent(&thermometer);
   
   // gets x y z acceleration
   double x_acc = accelerometer.acceleration.x;
