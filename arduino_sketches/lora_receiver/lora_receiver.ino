@@ -58,23 +58,24 @@ bool verify_data(String data) {
 bool verify_packet(String packet_content, char delimiter) {
   /* Verifies the integrity of the packet (checks for missing data or corruption) */
   int num_spacers = 0;
-  int delimiter_index = 0;
+  int index = 0;
 
-  String packet_copy = packet_content;
+  // adds an extra delimiter to the end (so it can read final value)
+  String packet_copy = packet_content + delimiter;
 
   while (packet_copy.length() > 0) {
     // checks if a data spacer is found
-    delimiter_index = packet_copy.indexOf(delimiter);
+    index = packet_copy.indexOf(delimiter);
     // stops the search if no delimiter characters were found
-    if (delimiter_index == -1) {
+    if (index == -1) {
       break;
     }
     ++num_spacers;
 
     // if the data is not a valid double, then the packet is corrupted (invalid)
-    if (!verify_data(packet_copy.substring(0, delimiter_index))) { return false; }
+    if (!verify_data(packet_copy.substring(0, index))) { return false; }
     // cuts the string so it can be iterated through indexOf
-    packet_copy = packet_copy.substring(delimiter_index + 1);
+    packet_copy = packet_copy.substring(index + 1);
   }
   Serial.print("Number of spacers: ");
   Serial.println(num_spacers);
@@ -101,6 +102,23 @@ void log_data(String packet_content) {
   }
 }
 
+void convert_to_array(double * data_array, String packet_content, char delimiter) {
+  /* Converts a data packet string into an array of data */
+
+  // adds an extra delimiter to the end (so it can read final value)
+  String packet_copy = packet_content + delimiter;
+
+  for (int i = 0; i < NUM_DATA; ++i) {
+    // separates data in packet using the delimiter.
+    int index = packet_copy.indexOf(delimiter);
+    // fills array with data
+    data_array[i] = packet_copy.substring(0, index).toDouble(); // converts string to double
+
+    // read data is removed from string
+    packet_copy = packet_copy.substring(index + 1);
+  }
+}
+
 void loop() {
   // try to parse packet
   int packet_size = LoRa.parsePacket();
@@ -116,6 +134,9 @@ void loop() {
       data_row = data_row + ((char) LoRa.read());
     }
     Serial.print(data_row);
+
+    double data_array[NUM_DATA];
+    convert_to_array(data_array, data_row, ' ');
 
     // print RSSI of packet
     Serial.print("' with RSSI ");
