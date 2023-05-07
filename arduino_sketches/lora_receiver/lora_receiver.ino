@@ -133,15 +133,14 @@ void loop() {
       // combines all characters in packet to a string
       data_row = data_row + ((char) LoRa.read());
     }
+    // contents: emf_volt, x_acc, y_acc, z_acc, x_rot, y_rot, z_rot, temp
     Serial.print(data_row);
-
-    double data_array[NUM_DATA];
-    convert_to_array(data_array, data_row, ' ');
 
     // print RSSI of packet
     Serial.print("' with RSSI ");
     Serial.println(LoRa.packetRssi());
 
+    // data is discarded if there is corruption
     if (!verify_packet(data_row, ' ')) {
       Serial.println("Data packet corrupted!");
     }
@@ -150,6 +149,10 @@ void loop() {
       // converts the spaces to commas (for csv file)
       data_row.replace(" ", ",");
       Serial.println(data_row);
+
+      // copies and separates the string of data into an array for processing
+      double data_array[NUM_DATA];
+      convert_to_array(data_array, data_row, ',');
 
       // saves data to a CSV file
       log_data(data_row);
