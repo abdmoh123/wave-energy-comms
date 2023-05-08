@@ -3,11 +3,12 @@ clear variables;
 clear global;
 
 %% Signal properties
-spreading_factor = 10; % Spreading Factor (range = 7-12)
+spreading_factor = 7; % Spreading Factor (range = 7-12)
 bandwidth = 125e3; % Bandwidth [Hz]
 carrier_frequency = 868e6; % LoRa frequency band (868MHz = license exempt)
 transmit_power = 14; % Transmission power [dBW]
-noise_power = 5.2; % Noise power [dBW] (5.2 approximately = -5 SNR) - limit for 7SP = 31, limit for 12SP = 45
+noise_power = 31; % Noise power [dBW] (5.2 approximately = -5 SNR) - limit for 7SP = 31, limit for 12SP = 45
+distance = 3e3; % Distance [m] between the 2 transceivers
 
 % Message/payload being transmitted
 message = "Hello World!";
@@ -35,7 +36,7 @@ Pt = 10 * log10(rms(modulated_signal) .^ 2);
 disp(['Transmit Power (Pt) = ' num2str(Pt) ' dBm'])
 
 %% Noise and attenuation
-interf_sim = InterferenceSimulator(3e3); % 3km distance
+interf_sim = InterferenceSimulator(distance); % 3km distance
 
 % modulated signal with attenuation as well as added noise
 atten_noisy_signal = interf_sim.attenuate_with_noise( ...
