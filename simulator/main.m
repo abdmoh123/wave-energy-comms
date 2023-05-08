@@ -3,11 +3,11 @@ clear variables;
 clear global;
 
 %% Signal properties
-spreading_factor = 10; % Spreading Factor
-bandwidth = 125e3; % Bandwidth
+spreading_factor = 10; % Spreading Factor (range = 7-12)
+bandwidth = 125e3; % Bandwidth [Hz]
 carrier_frequency = 868e6; % LoRa frequency band (868MHz = license exempt)
-transmit_power = 14; % Transmission power (in dBm)
-signal_noise_ratio = -5; % Signal Noise Ratio
+transmit_power = 14; % Transmission power [dBW]
+noise_power = 5.2; % Noise power [dBW] (5.2 approximately = -5 SNR) - limit for 7SP = 31, limit for 12SP = 45
 
 % Message/payload being transmitted
 message = "Hello World!";
@@ -39,12 +39,12 @@ interf_sim = InterferenceSimulator(3e3); % 3km distance
 
 % modulated signal with attenuation as well as added noise
 atten_noisy_signal = interf_sim.attenuate_with_noise( ...
-    modulated_signal, carrier_frequency, 0, 0, signal_noise_ratio ...
+    modulated_signal, carrier_frequency, noise_power, 0, 0 ...
 );
 
 % calcuates and prints the Free Space Path Loss
 fspl = interf_sim.calc_fspl(carrier_frequency, 0, 0);
-disp(['Free Space Path Loss = ' num2str(fspl) ' dB'])
+disp(['Free Space Path Loss = ' num2str(fspl)])
 
 % calculates and prints the transmitted power
 Pr = 10 * log10(rms(atten_noisy_signal) .^ 2);
