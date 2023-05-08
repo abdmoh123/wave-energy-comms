@@ -4,6 +4,11 @@
 #include <ctype.h>
 
 const int NUM_DATA = 7; // 7 pieces of data
+const double SAMPLE_PERIOD = 1.0 / (10.0 * EMF_MAX_FREQUENCY); // x2 satisfies nyquist
+
+double old_acc[3] = {0.0, 0.0, 0.0};
+double old_vel[3] = {0.0, 0.0, 0.0};
+double old_rot_vel[3] = {0.0, 0.0, 0.0};
 
 void setup() {
   Serial.begin(9600);
@@ -119,6 +124,31 @@ void convert_to_array(double * data_array, String packet_content, char delimiter
   }
 }
 
+double integrate(double new_value, double old_value) {
+  // integrating = area under graph = area of trapezium
+  return (new_value + old_value) * SAMPLE_PERIOD / 2;
+}
+
+void process_data(double * processed_array, double * data_array) {
+  // processed_array[0] = data_array[0]; // copies emf voltage to new array
+  double time = data_array[0];
+  double emf_volt = data_array[1];
+  double x_acc = data_array[2];
+  double y_acc = data_array[3];
+  double z_acc = data_array[4];
+  double angular_velocity[3] = {data_array[5], data_array[6], data_array[7]};
+  double temp = data_array[8];
+
+  double rot_position[3];
+  // gets rotational displacement (degrees) by integrating the angular velocity (assumes original position = 0 degrees)
+  for (int i = 0; i < 3; ++i) {
+    rot_position[i] = integrate(angular_velocity[i], old_rot_vel[i]);
+  }
+
+  double gravity_acc[3];
+
+}
+
 void loop() {
   // try to parse packet
   int packet_size = LoRa.parsePacket();
@@ -153,6 +183,8 @@ void loop() {
       // copies and separates the string of data into an array for processing
       double data_array[NUM_DATA];
       convert_to_array(data_array, data_row, ',');
+      double processed_array[NUM_DATA];
+      process_data(processed_array, data_array);
 
       // saves data to a CSV file
       log_data(data_row);

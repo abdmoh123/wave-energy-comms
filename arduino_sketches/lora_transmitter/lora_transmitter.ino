@@ -118,6 +118,8 @@ void loop() {
   Serial.println("\nSending packet...");
   // sends packet with data
   LoRa.beginPacket();
+  LoRa.print(time);
+  LoRa.print(" ");
   LoRa.print(emf_volt);
   LoRa.print(" "); // space is used to separate each data value
   LoRa.print(x_acc);
