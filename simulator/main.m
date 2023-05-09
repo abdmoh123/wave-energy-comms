@@ -6,8 +6,9 @@ clear global;
 spreading_factor = 10; % Spreading Factor (range = 7-12)
 bandwidth = 125e3; % Bandwidth [Hz]
 carrier_frequency = 868e6; % LoRa frequency band (868MHz = license exempt)
-transmit_power = 14; % Transmission power [dBW]
-noise_power = 5.2; % Noise power [dBW] (5.2 approximately = -5 SNR) - limit for 7SP = 31, limit for 12SP = 45
+transmit_power = 14; % Transmission power [dBm]
+% Limit for 7SP = -59, limit for 12SP = -45
+noise_power = -84.6; % Noise power [dBm] (-84.6 approximately = -5 SNR at 3km)
 distance = 3e3; % Distance [m] between the 2 transceivers
 
 % Message/payload being transmitted
@@ -32,11 +33,13 @@ modulated_signal = LoRa_Tx( ...
 );
 
 % calculates and prints the transmitted power (should equal the predefined value)
-Pt = 10 * log10(rms(modulated_signal) .^ 2);
+Pt = 10 * log10(rms(modulated_signal)^2);
 disp(['Transmit Power (Pt) = ' num2str(Pt) ' dBm'])
 
 %% Noise and attenuation
-interf_sim = InterferenceSimulator(distance); % 3km distance
+interf_sim = SignalAttenuator(distance); % 3km distance
+
+atten_clean_signal = interf_sim.attenuate(modulated_signal, carrier_frequency, 0, 0);
 
 % modulated signal with attenuation as well as added noise
 atten_noisy_signal = interf_sim.attenuate_with_noise( ...
@@ -78,6 +81,21 @@ nexttile
 obw(modulated_signal, sample_frequency);
 
 exportgraphics(clean_tiles, 'clean_signal.png', 'Resolution', 300)
+
+%% LoRa signal plots
+figure(3)
+clean_tiles = tiledlayout(2, 1);
+
+% plots frequency spectrum of the modulated signal without noise
+nexttile
+spectrogram(atten_clean_signal, 500, 0, 500, sample_frequency, 'yaxis', 'centered')
+title("Frequency spectrum clean modulated signal");
+
+% plots the 99% occupied bandwidth of the modulated signal without noise
+nexttile
+obw(atten_clean_signal, sample_frequency);
+
+exportgraphics(clean_tiles, 'att_signal.png', 'Resolution', 300)
 
 %% Attenuated noisy signal plots
 figure(2)
