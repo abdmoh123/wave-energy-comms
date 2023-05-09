@@ -7,8 +7,10 @@
 
 const double MAX_EMF_VOLTAGE = 20.0;
 const double EMF_MAX_FREQUENCY = 15.0;
-const double SAMPLE_PERIOD = 1.0 / (10.0 * EMF_MAX_FREQUENCY); // x2 satisfies nyquist
+const double SAMPLE_PERIOD = 1.0 / (4.0 * EMF_MAX_FREQUENCY); // x2 satisfies nyquist
+
 double time = 0.0; // for simulating emf voltage
+int sample_counter = 0;
 
 Adafruit_MPU6050 mpu;
 Adafruit_Sensor *acc_sensor, *gyro_sensor, *temp_sensor;
@@ -31,6 +33,7 @@ void setup() {
     while (1) { LowPower.deepSleep(3600000); } // deep sleeps (1h) to save power
   }
   Serial.println("LoRa successful!");
+  LoRa.setSignalBandwidth(250E3);
   
   // tries to initialize mpu6050 sensor
   if (!mpu.begin()) {
@@ -44,13 +47,12 @@ void setup() {
   // gets data from the sensor for calibration
   acc_sensor = mpu.getAccelerometerSensor();
   gyro_sensor = mpu.getGyroSensor();
-  temp_sensor = mpu.getTemperatureSensor();
   acc_sensor->getEvent(&accelerometer);
   gyro_sensor->getEvent(&gyroscope);
   // sets the error values to calibrate the sensors
-  x_acc_error = accelerometer.acceleration.x - 9.81; // ignores influence of gravity
-  y_acc_error = accelerometer.acceleration.y;
-  z_acc_error = accelerometer.acceleration.z;
+  // x_acc_error = 0; // ignores influence of gravity
+  // y_acc_error = -0.06;
+  // z_acc_error = -0.38;
   x_rot_error = gyroscope.gyro.x;
   y_rot_error = gyroscope.gyro.y;
   z_rot_error = gyroscope.gyro.z;
@@ -74,6 +76,8 @@ double gen_voltage(double time) {
 }
 
 void loop() {
+  int before_sensors = millis();
+
   // generates and prints simulated emf voltage
   double emf_volt = gen_voltage(time);
     
@@ -110,14 +114,13 @@ void loop() {
   Serial.print("z_rot:");
   Serial.println(z_rot);
 
-  // gets and prints the temperature
-  double temp = thermometer.temperature;
-  Serial.print("temp:");
-  Serial.println(temp);
+  int after_sensors = millis();
 
   Serial.println("\nSending packet...");
   // sends packet with data
   LoRa.beginPacket();
+  LoRa.print(time);
+  LoRa.print(" ");
   LoRa.print(emf_volt);
   LoRa.print(" "); // space is used to separate each data value
   LoRa.print(x_acc);
@@ -134,8 +137,35 @@ void loop() {
   LoRa.endPacket();
   Serial.println("Packet sent!\n");
 
-  // advances counter
-  time += SAMPLE_PERIOD;
+  int after_lora = millis();
+  double sensor_time = (double) (after_sensors - before_sensors) / 1000.0;
+  double transmit_time = (double) (after_lora - after_sensors) / 1000.0;
+  double time_taken = SAMPLE_PERIOD + transmit_time + sensor_time;
+
+  // advances time and counter
+  time += time_taken;
+  ++sample_counter;
+
+  Serial.println(sample_counter * time_taken);
+
+  // resets the timer every 24 hours
+  if (time >= 86400.0) {
+    time -= 86400.0;
+  }
+  // sleeps the arduino after 5 seconds
+  if ((sample_counter * time_taken) >= 5.0) {
+    // should be around x samples
+    Serial.print("Transmitted ");
+    Serial.print(sample_counter);
+    Serial.println(" samples, sleeping...");
+    double sleep_time = 10.0; // 1s
+    LowPower.deepSleep((int) sleep_time * 1000); // measured in milliseconds
+    Serial.println("Waking up...");
+    // resets sample counter
+    sample_counter = 0;
+    time += sleep_time;
+  }
+
   // delays/waits for 1/15s (Sample period * 1000 due to s -> ms conversion)
   delay(SAMPLE_PERIOD * 1000);
 }
