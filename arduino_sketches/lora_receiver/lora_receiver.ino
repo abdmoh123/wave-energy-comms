@@ -3,9 +3,10 @@
 #include <SD.h>
 #include <ctype.h>
 
-const int NUM_DATA = 7; // 7 pieces of data
+const int NUM_DATA = 8; // 8 pieces of data
 const double SAMPLE_PERIOD = 1.0 / (10.0 * EMF_MAX_FREQUENCY); // x2 satisfies nyquist
 
+String old_packet = "";
 double old_acc[3] = {0.0, 0.0, 0.0};
 double old_vel[3] = {0.0, 0.0, 0.0};
 double old_rot_vel[3] = {0.0, 0.0, 0.0};
@@ -29,6 +30,7 @@ void setup() {
     while (1); // halts the program
   }
   // LoRa.setSpreadingFactor(9);
+  LoRa.setSignalBandwidth(250E3);
   Serial.println("LoRa started successfully!");
 }
 
@@ -86,7 +88,7 @@ bool verify_packet(String packet_content, char delimiter) {
   Serial.println(num_spacers);
 
   // packet is considered valid if there are the correct amount of spacers (delimiter)
-  if (num_spacers == NUM_DATA - 1) { return true; }
+  if (num_spacers == NUM_DATA) { return true; } // extra spacer added in the beginning (line 65)
   // if incorrect number of spacers found, then some data is missing
   return false;
 }
@@ -172,22 +174,31 @@ void loop() {
 
     // data is discarded if there is corruption
     if (!verify_packet(data_row, ' ')) {
-      Serial.println("Data packet corrupted!");
+      Serial.println("Discarded corrupted data packet!");
     }
     else {
-      Serial.println("Data read successfully!");
-      // converts the spaces to commas (for csv file)
-      data_row.replace(" ", ",");
-      Serial.println(data_row);
+      // checks if the data is a duplicate
+      if (data_row == old_packet) {
+        // does nothing
+        Serial.println("Discarded duplicate packet!");
+      }
+      else {
+        Serial.println("Data read successfully!");
+        // copies and separates the string of data into an array for processing
+		double data_array[NUM_DATA];
+		convert_to_array(data_array, data_row, ',');
+		double processed_array[NUM_DATA];
+		process_data(processed_array, data_array);
 
-      // copies and separates the string of data into an array for processing
-      double data_array[NUM_DATA];
-      convert_to_array(data_array, data_row, ',');
-      double processed_array[NUM_DATA];
-      process_data(processed_array, data_array);
+        // updates old_packet with new values
+        old_packet = data_row;
+        // converts the spaces to commas (for csv file)
+        data_row.replace(" ", ",");
 
-      // saves data to a CSV file
-      log_data(data_row);
+        // saves data to a CSV file
+        log_data(data_row);
+      }
+>>>>>>> b814800fe533e67b7874661a130b770faf57b267
     }
   }
 }
