@@ -30,12 +30,8 @@ Adafruit_MPU6050 mpu;
 Adafruit_Sensor *acc_sensor, *gyro_sensor;
 
 // variables to cancel out any errors in measurements
-float x_rot_error = 0.0;
-float y_rot_error = 0.0;
-float z_rot_error = 0.0;
-float x_acc_error = 0.0;
-float y_acc_error = 0.0;
-float z_acc_error = 0.0;
+float x_acc_error, y_acc_error, z_acc_error = 0.0;
+float x_rot_error, y_rot_error, z_rot_error = 0.0;
 
 void setup() {
   Serial.begin(9600);
@@ -71,6 +67,9 @@ void setup() {
   acc_sensor->getEvent(&accelerometer);
   gyro_sensor->getEvent(&gyroscope);
   // sets the error values to calibrate the sensors
+  x_acc_error = accelerometer.acceleration.x - 9.81; // ignores gravity
+  y_acc_error = accelerometer.acceleration.y;
+  z_acc_error = accelerometer.acceleration.z;
   x_rot_error = gyroscope.gyro.x;
   y_rot_error = gyroscope.gyro.y;
   z_rot_error = gyroscope.gyro.z;
@@ -118,9 +117,9 @@ void loop() {
   gyro_sensor->getEvent(&gyroscope);
   
   // gets x y z acceleration
-  float x_acc = accelerometer.acceleration.x;
-  float y_acc = accelerometer.acceleration.y;
-  float z_acc = accelerometer.acceleration.z;
+  float x_acc = accelerometer.acceleration.x - x_acc_error;
+  float y_acc = accelerometer.acceleration.y - y_acc_error;
+  float z_acc = accelerometer.acceleration.z - z_acc_error;
   // prints out the values
   Serial.print("x_acc:");
   Serial.print(x_acc);

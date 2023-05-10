@@ -4,12 +4,22 @@
 #include <ctype.h>
 
 const int NUM_DATA = 8; // 8 pieces of data
-const double SAMPLE_PERIOD = 1.0 / (10.0 * EMF_MAX_FREQUENCY); // x2 satisfies nyquist
+// const double SAMPLE_PERIOD = 1.0 / (10.0 * EMF_MAX_FREQUENCY); // x2 satisfies nyquist
 
 String old_packet = "";
-double old_acc[3] = {0.0, 0.0, 0.0};
-double old_vel[3] = {0.0, 0.0, 0.0};
-double old_rot_vel[3] = {0.0, 0.0, 0.0};
+double old_time = 0.0;
+double old_x_acc, old_y_acc, old_z_acc = 0.0;
+double old_x_rot, old_y_rot, old_z_rot = 0.0;
+
+// // unit vector
+// float gravity[3] = {0.0, 0.0, 1.0};
+
+// // rotation matrix used for removing gravity
+// float rotation_matrix[3][3] = {
+//   {cos(z_ang_pos)*cos(x_ang_pos), cos(z_ang_pos)*sin(x_ang_pos)*sin(y_ang_pos)-sin(z_ang_pos)*cos(y_ang_pos), cos(z_ang_pos)*sin(x_ang_pos)*cos(y_ang_pos)+sin(z_ang_pos)*sin(y_ang_pos)},
+//   {sin(z_ang_pos)*cos(x_ang_pos), sin(z_ang_pos)*sin(x_ang_pos)*sin(y_ang_pos)+cos(z_ang_pos)*cos(y_ang_pos), sin(z_ang_pos)*sin(x_ang_pos)*cos(y_ang_pos)-cos(z_ang_pos)*sin(y_ang_pos)},
+//   {-sin(x_ang_pos), cos(x_ang_pos)*sin(y_ang_pos), cos(x_ang_pos)*cos(y_ang_pos)}
+// };
 
 void setup() {
   Serial.begin(9600);
@@ -126,29 +136,68 @@ void convert_to_array(double * data_array, String packet_content, char delimiter
   }
 }
 
-double integrate(double new_value, double old_value) {
+double integrate(double new_value, double old_value, double time) {
   // integrating = area under graph = area of trapezium
-  return (new_value + old_value) * SAMPLE_PERIOD / 2;
+  return (new_value + old_value) * time / 2;
 }
 
 void process_data(double * processed_array, double * data_array) {
-  // processed_array[0] = data_array[0]; // copies emf voltage to new array
+  // separates array elements into different variables
   double time = data_array[0];
   double emf_volt = data_array[1];
   double x_acc = data_array[2];
-  double y_acc = data_array[3];
-  double z_acc = data_array[4];
-  double angular_velocity[3] = {data_array[5], data_array[6], data_array[7]};
-  double temp = data_array[8];
+  double x_rot = data_array[3]; // yaw (beta)
+  double y_acc = data_array[4];
+  double y_rot = data_array[5]; // roll (theta)
+  double z_acc = data_array[6];
+  double z_rot = data_array[7]; // pitch (alpha)
 
-  double rot_position[3];
-  // gets rotational displacement (degrees) by integrating the angular velocity (assumes original position = 0 degrees)
-  for (int i = 0; i < 3; ++i) {
-    rot_position[i] = integrate(angular_velocity[i], old_rot_vel[i]);
-  }
+  // gets rotational displacement (radians) by integrating the angular velocity (assumes original position = 0 radians)
+  double x_ang_pos = integrate(x_rot, old_x_rot, time - old_time);
+  double y_ang_pos = integrate(y_rot, old_y_rot, time - old_time);
+  double z_ang_pos = integrate(z_rot, old_z_rot, time - old_time);
+  
+  Serial.print(x_ang_pos);
+  Serial.print(",");
+  Serial.print(y_ang_pos);
+  Serial.print(",");
+  Serial.println(z_ang_pos);
 
-  double gravity_acc[3];
+  // double rot_gravity[3] = {
+  //   gravity[2] * rotation_matrix[2][0], gravity[2] * rotation_matrix[2][1], gravity[2] * rotation_matrix[2][2]
+  // };
 
+  double x_gravity =  9.81 * cos(x_ang_pos)*cos(y_ang_pos);
+  double y_gravity = 9.81 * cos(x_ang_pos) * sin(y_ang_pos);
+  double z_gravity = -9.81 * cos(x_ang_pos);
+
+  Serial.print(x_gravity);
+  Serial.print(",");
+  Serial.print(y_gravity);
+  Serial.print(",");
+  Serial.println(z_gravity);
+  Serial.print(x_acc - x_gravity);
+  Serial.print(",");
+  Serial.print(y_acc - y_gravity);
+  Serial.print(",");
+  Serial.println(z_acc - z_gravity);
+
+  old_time = time;
+  old_x_acc = x_acc;
+  old_y_acc = y_acc;
+  old_z_acc = z_acc;
+  old_x_rot = x_rot;
+  old_y_rot = y_rot;
+  old_z_rot = z_rot;
+
+  processed_array[0] = time;
+  processed_array[1] = emf_volt;
+  processed_array[2] = x_acc - x_gravity;
+  processed_array[3] = x_rot;
+  processed_array[4] = y_acc - y_gravity;
+  processed_array[5] = y_rot;
+  processed_array[6] = z_acc - z_gravity;
+  processed_array[7] = z_rot;
 }
 
 void loop() {
@@ -165,7 +214,7 @@ void loop() {
       // combines all characters in packet to a string
       data_row = data_row + ((char) LoRa.read());
     }
-    // contents: emf_volt, x_acc, y_acc, z_acc, x_rot, y_rot, z_rot, temp
+    // contents: time, emf_volt, x_acc, x_rot, y_acc, y_rot, z_acc, z_rot
     Serial.print(data_row);
 
     // print RSSI of packet
@@ -185,10 +234,10 @@ void loop() {
       else {
         Serial.println("Data read successfully!");
         // copies and separates the string of data into an array for processing
-		double data_array[NUM_DATA];
-		convert_to_array(data_array, data_row, ',');
-		double processed_array[NUM_DATA];
-		process_data(processed_array, data_array);
+        double data_array[NUM_DATA];
+        convert_to_array(data_array, data_row, ' ');
+        double processed_array[NUM_DATA];
+        process_data(processed_array, data_array);
 
         // updates old_packet with new values
         old_packet = data_row;
@@ -198,7 +247,6 @@ void loop() {
         // saves data to a CSV file
         log_data(data_row);
       }
->>>>>>> b814800fe533e67b7874661a130b770faf57b267
     }
   }
 }
