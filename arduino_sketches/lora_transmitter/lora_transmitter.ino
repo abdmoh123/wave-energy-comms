@@ -1,4 +1,4 @@
-#include <ArduinoLowPower.h>
+#include "ArduinoLowPower.h"
 #include <SPI.h>
 #include <LoRa.h>
 #include <Adafruit_MPU6050.h>
@@ -13,8 +13,8 @@ double time = 0.0; // for simulating emf voltage
 int sample_counter = 0;
 
 Adafruit_MPU6050 mpu;
-Adafruit_Sensor *acc_sensor, *gyro_sensor, *temp_sensor;
-sensors_event_t accelerometer, gyroscope, thermometer;
+Adafruit_Sensor *acc_sensor, *gyro_sensor;
+
 // variables to cancel out any errors in measurements
 double x_rot_error = 0.0;
 double y_rot_error = 0.0;
@@ -43,7 +43,10 @@ void setup() {
   mpu.setAccelerometerRange(MPU6050_RANGE_8_G); // set accelerometer range to +-8G
   mpu.setGyroRange(MPU6050_RANGE_500_DEG); // set gyro range to +- 500 deg/s
   mpu.setFilterBandwidth(MPU6050_BAND_5_HZ); // set low pass filter bandwidth to 5 Hz (improves stability)
+  mpu.enableSleep(false);
+  mpu.enableCycle(false);
 
+  sensors_event_t accelerometer, gyroscope;
   // gets data from the sensor for calibration
   acc_sensor = mpu.getAccelerometerSensor();
   gyro_sensor = mpu.getGyroSensor();
@@ -78,13 +81,14 @@ double gen_voltage(double time) {
 void loop() {
   int before_sensors = millis();
 
+  sensors_event_t accelerometer, gyroscope;
+
   // generates and prints simulated emf voltage
   double emf_volt = gen_voltage(time);
     
   // get new sensor events with the readings
   acc_sensor->getEvent(&accelerometer);
   gyro_sensor->getEvent(&gyroscope);
-  temp_sensor->getEvent(&thermometer);
   
   // gets x y z acceleration
   double x_acc = accelerometer.acceleration.x;
@@ -146,7 +150,12 @@ void loop() {
   time += time_taken;
   ++sample_counter;
 
-  Serial.println(sample_counter * time_taken);
+  // prints a stopwatch and sample counter (both reset at sleep)
+  Serial.print("stopwatch:");
+  Serial.print(sample_counter * time_taken);
+  Serial.print(",");
+  Serial.print("sample:");
+  Serial.println(sample_counter);
 
   // resets the timer every 24 hours
   if (time >= 86400.0) {
@@ -158,9 +167,11 @@ void loop() {
     Serial.print("Transmitted ");
     Serial.print(sample_counter);
     Serial.println(" samples, sleeping...");
-    double sleep_time = 10.0; // 1s
-    LowPower.deepSleep((int) sleep_time * 1000); // measured in milliseconds
+
+    int sleep_time = 10.0; // s
+    sleep_mode(sleep_time);
     Serial.println("Waking up...");
+
     // resets sample counter
     sample_counter = 0;
     time += sleep_time;
@@ -168,4 +179,16 @@ void loop() {
 
   // delays/waits for 1/15s (Sample period * 1000 due to s -> ms conversion)
   delay(SAMPLE_PERIOD * 1000);
+}
+
+void sleep_mode(double sleep_time) {
+  /* Function responsible for sleeping all components of the device in order to save power */
+
+  Serial.flush(); // waits for all serial data to be transmitted before continuing
+  Serial.end(); // ends serial communication
+  mpu.enableSleep(true); // sleeps the sensor
+  LowPower.deepSleep((int) sleep_time * 1000); // measured in milliseconds
+  mpu.enableSleep(false); // wakes up the sensor
+  Serial.begin(9600); // re-enables serial commmunication (monitor + plot)
+  while (!Serial); // waits for serial connection before continuing
 }
