@@ -1,4 +1,4 @@
-#include "ArduinoLowPower.h"
+#include <ArduinoLowPower.h>
 #include <SPI.h>
 #include <LoRa.h>
 #include <Adafruit_MPU6050.h>
@@ -60,7 +60,7 @@ void setup() {
   mpu.setGyroRange(MPU6050_RANGE_500_DEG); // set gyro range to +- 500 deg/s
   mpu.setFilterBandwidth(MPU6050_BAND_5_HZ); // set low pass filter bandwidth to 5 Hz (improves stability)
   // enables cycle mode: sensors output measurement evey 1/40s then sleep in between these measurements to save power
-  mpu.setCycleRate(MPU_6050_40_HZ);
+  mpu.setCycleRate(MPU6050_CYCLE_40_HZ);
   mpu.enableSleep(false);
   mpu.enableCycle(true);
 
