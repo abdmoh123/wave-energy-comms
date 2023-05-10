@@ -24,7 +24,7 @@ This project uses code from [this repository](https://github.com/bhomssi/LoRaMat
 - Tweak signal properties and message in main.m as you like
 - Run main.m and record the produced results
 
-# References
+## References
 
 ### LoRa emulator:
 
@@ -33,3 +33,9 @@ This project uses code from [this repository](https://github.com/bhomssi/LoRaMat
 - Link on IEEE: https://ieeexplore.ieee.org/document/9395074
 
 - Link on researchgate: https://www.researchgate.net/publication/350581481_IoT_Network_Design_using_Open-Source_LoRa_Coverage_Emulator
+
+# Arduino LoRa transmitter and receiver
+
+Sketch files holding code that transmits and receives LoRa packets with data read from a sensor and an external voltage signal. The code also includes a sleeping feature to reduce power consumption.
+
+The devices used include 2 Arduino MKR WAN 1310s, an MPU6050 sensor, and an MKR ETH Shield for logging data (other shields that connect an SD card can also be used).
