@@ -3,7 +3,8 @@
 #include <SD.h>
 #include <ctype.h>
 
-const int NUM_DATA = 7; // 7 pieces of data
+const int NUM_DATA = 8; // 8 pieces of data
+String old_packet = "";
 
 void setup() {
   Serial.begin(9600);
@@ -24,6 +25,7 @@ void setup() {
     while (1); // halts the program
   }
   // LoRa.setSpreadingFactor(9);
+  LoRa.setSignalBandwidth(250E3);
   Serial.println("LoRa started successfully!");
 }
 
@@ -81,7 +83,7 @@ bool verify_packet(String packet_content, char delimiter) {
   Serial.println(num_spacers);
 
   // packet is considered valid if there are the correct amount of spacers (delimiter)
-  if (num_spacers == NUM_DATA - 1) { return true; }
+  if (num_spacers == NUM_DATA) { return true; } // extra spacer added in the beginning (line 65)
   // if incorrect number of spacers found, then some data is missing
   return false;
 }
@@ -135,24 +137,32 @@ void loop() {
     }
     Serial.print(data_row);
 
-    double data_array[NUM_DATA];
-    convert_to_array(data_array, data_row, ' ');
-
     // print RSSI of packet
     Serial.print("' with RSSI ");
     Serial.println(LoRa.packetRssi());
 
     if (!verify_packet(data_row, ' ')) {
-      Serial.println("Data packet corrupted!");
+      Serial.println("Discarded corrupted data packet!");
     }
     else {
-      Serial.println("Data read successfully!");
-      // converts the spaces to commas (for csv file)
-      data_row.replace(" ", ",");
-      Serial.println(data_row);
+      // checks if the data is a duplicate
+      if (data_row == old_packet) {
+        // does nothing
+        Serial.println("Discarded duplicate packet!");
+      }
+      else {
+        Serial.println("Data read successfully!");
+        // double data_array[NUM_DATA];
+        // convert_to_array(data_array, data_row, ' ');
 
-      // saves data to a CSV file
-      log_data(data_row);
+        // updates old_packet with new values
+        old_packet = data_row;
+        // converts the spaces to commas (for csv file)
+        data_row.replace(" ", ",");
+
+        // saves data to a CSV file
+        log_data(data_row);
+      }
     }
   }
 }
