@@ -11,7 +11,7 @@ const float EMF_MAX_FREQUENCY = 15.0;
 const float SAMPLE_PERIOD = 1.0 / 40.0; // satisfies nyquist (40 > 2 x 15 = 30)
 
 const float SAMPLING_TIME = 5.0; // time taken to sample data before transmitting and sleeping
-const int SLEEP_TIME = 10 * 1000; // ms
+const int SLEEP_TIME = 19192; // ms
 
 // buffers for storing sampled data before transmitting packet
 float time_buffer[500];
