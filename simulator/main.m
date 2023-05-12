@@ -7,8 +7,8 @@ spreading_factor = 10; % Spreading Factor (range = 7-12)
 bandwidth = 125e3; % Bandwidth [Hz]
 carrier_frequency = 868e6; % LoRa frequency band (868MHz = license exempt)
 transmit_power = 14; % Transmission power [dBm]
-% Limit for 7SP = -59, limit for 12SP = -45
-noise_power = -84.6; % Noise power [dBm] (-84.6 approximately = -5 SNR at 3km)
+% approximate limits for 7SP = -60.7, 12SP = -45
+noise_power = -84.6; % Noise power [dBm] (-84.6 approximately = -5 SNR at 3km and SP = 10)
 distance = 3e3; % Distance [m] between the 2 transceivers
 
 % Message/payload being transmitted
@@ -95,7 +95,7 @@ title("Frequency spectrum clean modulated signal");
 nexttile
 obw(atten_clean_signal, sample_frequency);
 
-exportgraphics(clean_tiles, 'att_signal.png', 'Resolution', 300)
+exportgraphics(clean_tiles, 'attenuated_signal.png', 'Resolution', 300)
 
 %% Attenuated noisy signal plots
 figure(2)
