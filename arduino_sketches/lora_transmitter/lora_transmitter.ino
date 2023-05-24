@@ -11,7 +11,7 @@ const float EMF_MAX_FREQUENCY = 15.0;
 const float SAMPLE_PERIOD = 1.0 / 40.0; // satisfies nyquist (40 > 2 x 15 = 30)
 
 const float SAMPLING_TIME = 5.0; // time taken to sample data before transmitting and sleeping
-const int SLEEP_TIME = 19192; // ms
+const int SLEEP_TIME = 19192; // ms (should last around 3 months at full charge)
 
 // buffers for storing sampled data before transmitting packet
 float time_buffer[500];
@@ -70,7 +70,7 @@ void setup() {
   gyro_sensor = mpu.getGyroSensor();
   acc_sensor->getEvent(&accelerometer);
   gyro_sensor->getEvent(&gyroscope);
-  // sets the error values to calibrate the sensors
+  // sets the error values to calibrate the sensors (must be still for good calibration)
   x_rot_error = gyroscope.gyro.x;
   y_rot_error = gyroscope.gyro.y;
   z_rot_error = gyroscope.gyro.z;
